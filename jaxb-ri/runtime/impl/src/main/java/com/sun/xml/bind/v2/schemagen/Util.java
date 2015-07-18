@@ -120,11 +120,10 @@ public final class Util {
      * equal or either of them are null.
      */
     public static boolean equalsIgnoreCase(String s, String t) {
-        if (s == t) return true;
-        if ((s != null) && (t != null)) {
-            return s.equalsIgnoreCase(t);
+        if (s == t) {
+            return true;
         }
-        return false;
+        return (s != null) && (t != null) && s.equalsIgnoreCase(t);
     }
 
     /**
@@ -136,10 +135,9 @@ public final class Util {
      * them are null.
      */
     public static boolean equal(String s, String t) {
-        if (s == t) return true;
-        if ((s != null) && (t != null)) {
-            return s.equals(t);
+        if (s == t) {
+            return true;
         }
-        return false;
-    }    
+        return (s != null) && (t != null) && s.equals(t);
+    }
 }

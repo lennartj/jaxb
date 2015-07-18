@@ -40,49 +40,75 @@
 
 package com.sun.xml.bind.v2.schemagen;
 
-import java.io.IOException;
-import java.util.logging.Logger;
+import com.sun.xml.bind.v2.util.Validate;
 
 import javax.xml.bind.SchemaOutputResolver;
 import javax.xml.transform.Result;
-
-import com.sun.xml.bind.Util;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * {@link SchemaOutputResolver} that wraps the user-specified resolver
- * and makes sure that it's following the contract.
- *
- * <p>
- * This protects the rest of the {@link XmlSchemaGenerator} from client programming
- * error.
+ * <p>{@link SchemaOutputResolver} that wraps the user-specified resolver and makes sure that
+ * it's following the contract.</p>
+ * <p>This protects the rest of the {@link XmlSchemaGenerator} from client programming errors.</p>
  */
 final class FoolProofResolver extends SchemaOutputResolver {
-    private static final Logger logger = Util.getClassLogger();
+
+    // Internal state
+    private static final Logger log = Logger.getLogger(FoolProofResolver.class.getName());
     private final SchemaOutputResolver resolver;
 
-    public FoolProofResolver(SchemaOutputResolver resolver) {
-        assert resolver!=null;
-        this.resolver = resolver;
+    /**
+     * Compound constructor creating a FoolProofResolver delegating all work to the supplied SchemaOutputResolver.
+     *
+     * @param delegate A non-null SchemaOutputResolver instance.
+     */
+    public FoolProofResolver(final SchemaOutputResolver delegate) {
+
+        // Check sanity
+        Validate.notNull(delegate, "delegate");
+
+        // Assign internal state
+        this.resolver = delegate;
     }
 
-    public Result createOutput(String namespaceUri, String suggestedFileName) throws IOException {
-        logger.entering(getClass().getName(),"createOutput",new Object[]{namespaceUri,suggestedFileName});
-        Result r = resolver.createOutput(namespaceUri,suggestedFileName);
-        if(r!=null) {
-            String sysId = r.getSystemId();
-            logger.finer("system ID = "+sysId);
-            if(sysId!=null) {
-                // TODO: make sure that the system Id is absolute
+    /**
+     * {@inheritDoc}
+     */
+    public Result createOutput(final String namespaceUri, final String suggestedFileName) throws IOException {
 
-                // don't use java.net.URI, because it doesn't allow some characters (like SP)
-                // which can legally used as file names.
+        // Log somewhat
+        log.entering(getClass().getName(), "createOutput", new Object[]{namespaceUri, suggestedFileName});
 
-                // but don't use java.net.URL either, because it doesn't allow a made-up URI
-                // like kohsuke://foo/bar/zot
-            } else
-                throw new AssertionError("system ID cannot be null");
+        final Result toReturn = resolver.createOutput(namespaceUri, suggestedFileName);
+        if (toReturn != null) {
+
+            final String sysId = toReturn.getSystemId();
+            final String suffix = "(Namespace: [" + namespaceUri + "], Suggested FileName: ["
+                    + suggestedFileName + "])";
+            if(log.isLoggable(Level.FINER)) {
+                log.finer("System ID: [" + sysId + "]. " + suffix);
+            }
+
+            // Check sanity
+            if(sysId == null) {
+                throw new AssertionError("System ID cannot be null. " + suffix);
+            }
+
+            // TODO: make sure that the system Id is absolute
+
+            /*
+             * 1) We cannot use java.net.URI, since it disallows some characters legally useable in
+             *    file names (such as space).
+             * 2) We cannot use java.net.URL, since it does not permit a made-up URI like kohsuke://foo/bar/zot
+             */
+
         }
-        logger.exiting(getClass().getName(),"createOutput",r);
-        return r;
+
+        log.exiting(getClass().getName(), "createOutput", toReturn);
+
+        // All done.
+        return toReturn;
     }
 }
